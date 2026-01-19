@@ -123,11 +123,8 @@ class QuizEngine:
                 score += 1
         return score
 
-    def correct_count(self) -> int:
-        return self.score()
-
     def wrong_count(self) -> int:
-        return len(self.questions) - self.correct_count()
+        return len(self.questions) - self.score()
 
 
 class QuizApp:
@@ -244,13 +241,13 @@ class QuizApp:
     def show_results(self) -> None:
         score = self.engine.score()
         total = len(self.engine.questions)
-        correct = self.engine.correct_count()
+        correct = score
         wrong = self.engine.wrong_count()
         percentage = round((score / total) * 100, 2) if total else 0
 
         try:
             self.results_storage.save(score, total)
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, json.JSONDecodeError) as exc:
             messagebox.showerror("Save Error", f"Could not save results: {exc}")
 
         self.container.destroy()
@@ -292,14 +289,15 @@ def main() -> None:
     parser.add_argument("--results", help="Path to results file (CSV or JSON).", default="results.csv")
     args = parser.parse_args()
 
+    root = tk.Tk()
+
     try:
         question_file = resolve_question_file(args.questions)
         questions = QuizDataLoader(question_file).load()
-    except Exception as exc:  # noqa: BLE001
+    except (FileNotFoundError, ValueError, json.JSONDecodeError, OSError) as exc:
         messagebox.showerror("Load Error", f"Could not load questions: {exc}")
+        root.destroy()
         return
-
-    root = tk.Tk()
     QuizApp(root, questions, args.results)
     root.mainloop()
 
